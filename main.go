@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/groovypotato/gator/internal/config"
@@ -21,6 +22,7 @@ func main() {
 		fmt.Println(err)
 		return
 	} else {
-		fmt.Println(newConfig)
+		jsonData, _ := json.MarshalIndent(newConfig, "", "  ")
+		fmt.Println(string(jsonData))
 	}
 }
