@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/groovypotato/gator/internal/config"
+
+	_ "github.com/lib/pq"
 )
 
 type state struct {
@@ -69,6 +71,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	currConfig.DBURL = "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable"
 	newState.config = &currConfig
 	newCommands := commands{
 		cmdList: make(map[string]func(*state, command) error),
