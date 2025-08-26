@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/groovypotato/gator/internal/config"
 )
@@ -49,16 +50,33 @@ func (c *commands) register(name string, f func(*state, command) error) {
 }
 
 func main() {
+	if len(os.Args) < 3 {
+		if len(os.Args) == 1 {
+			fmt.Println("not enough arguments were provided")
+			os.Exit(1)
+		} else if len(os.Args) == 2 {
+			fmt.Println("provide a username")
+			os.Exit(1)
+		}
+	}
+	newCommand := command{
+		name: os.Args[1],
+		args: []string{os.Args[2]},
+	}
+	var newState state
 	currConfig, err := config.Read()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	err = currConfig.SetUser("groovypotato")
-	if err != nil {
-		fmt.Println(err)
-		return
+	newState.config = &currConfig
+	newCommands := commands{
+		cmdList: make(map[string]func(*state, command) error),
 	}
+	newCommands.register("login", handlerLogin)
+
+	newCommands.run(&newState, newCommand)
+
 	newConfig, err := config.Read()
 	if err != nil {
 		fmt.Println(err)
