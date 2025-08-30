@@ -1,17 +1,23 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/groovypotato/gator/internal/config"
+	"github.com/groovypotato/gator/internal/database"
 
 	_ "github.com/lib/pq"
 )
 
 type state struct {
+	db *database.Queries
 	config *config.Config
 }
 
@@ -51,6 +57,30 @@ func (c *commands) register(name string, f func(*state, command) error) {
 	c.cmdList[name] = f
 }
 
+func handlerRegister(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return errors.New("username is required")
+	}
+	username := cmd.args[0]
+	p := database.CreateUserParams{
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name: username,
+	}
+	u, err := s.db.CreateUser(context.Background(), p)
+	if err != nil {
+		// likely duplicate name or other DB error
+		fmt.Println("error creating user:", err)
+		os.Exit(1)
+	}
+	if err := s.config.SetUser(username); err != nil {
+		return err
+	}
+	fmt.Printf("user created: %+v\n", u)
+	return nil
+}
+
 func main() {
 	if len(os.Args) < 3 {
 		if len(os.Args) == 1 {
@@ -71,16 +101,21 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	currConfig.DBURL = "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable"
-	
 	newState.config = &currConfig
 	newCommands := commands{
 		cmdList: make(map[string]func(*state, command) error),
 	}
 	newCommands.register("login", handlerLogin)
+	newCommands.register("register", handlerRegister)
 
+	dbURL := newState.config.DBURL
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Println(err)
+	}
+	dbQueries := database.New(db)
+	newState.db = dbQueries
 	newCommands.run(&newState, newCommand)
-
 	newConfig, err := config.Read()
 	if err != nil {
 		fmt.Println(err)

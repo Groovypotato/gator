@@ -27,7 +27,7 @@ func getConfigFilePath () (string, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			newConf := Config {
-				DBURL: "postgres://example",
+				DBURL: "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable",
 				CurrentUserName: "",
 			}
 			jsonData, err := json.MarshalIndent(newConf, "", "  ")
