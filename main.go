@@ -72,6 +72,7 @@ func main() {
 		return
 	}
 	currConfig.DBURL = "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable"
+	
 	newState.config = &currConfig
 	newCommands := commands{
 		cmdList: make(map[string]func(*state, command) error),
