@@ -35,7 +35,12 @@ func handlerLogin(s *state, cmd command) error {
 		return errors.New("username is required")
 	}
 	username := cmd.args[0]
-	if err := s.config.SetUser(username); err != nil {
+	u, err := s.db.GetUser(context.Background(), username)
+	if err != nil {
+		fmt.Println("user not found:", err)
+		os.Exit(1)
+	}
+	if err := s.config.SetUser(u.Name); err != nil {
 		return err
 	}
 	fmt.Printf("user has been set to %s", username)
@@ -58,28 +63,32 @@ func (c *commands) register(name string, f func(*state, command) error) {
 }
 
 func handlerRegister(s *state, cmd command) error {
-	if len(cmd.args) == 0 {
-		return errors.New("username is required")
-	}
-	username := cmd.args[0]
-	p := database.CreateUserParams{
-		ID: uuid.New(),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Name: username,
-	}
-	u, err := s.db.CreateUser(context.Background(), p)
-	if err != nil {
-		// likely duplicate name or other DB error
-		fmt.Println("error creating user:", err)
-		os.Exit(1)
-	}
-	if err := s.config.SetUser(username); err != nil {
-		return err
-	}
-	fmt.Printf("user created: %+v\n", u)
-	return nil
+    if len(cmd.args) == 0 {
+        return errors.New("username is required")
+    }
+    username := cmd.args[0]
+
+    p := database.CreateUserParams{
+        ID:        uuid.New(),
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+        Name:      username,
+    }
+
+    u, err := s.db.CreateUser(context.Background(), p)
+    if err != nil {
+        fmt.Println("error creating user:", err)
+        os.Exit(1)
+    }
+
+    if err := s.config.SetUser(username); err != nil {
+        return err
+    }
+
+    fmt.Printf("user created: %+v\n", u)
+    return nil
 }
+
 
 func main() {
 	if len(os.Args) < 3 {
