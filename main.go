@@ -55,6 +55,7 @@ func (c *commands) run(s *state, cmd command) error {
 	}
 }
 
+
 func (c *commands) register(name string, f func(*state, command) error) {
 	if c.cmdList == nil {
 		c.cmdList = make(map[string]func(*state, command) error)
