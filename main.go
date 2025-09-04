@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -90,20 +91,63 @@ func handlerRegister(s *state, cmd command) error {
     return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+        return errors.New("too many arguments")
+    }
+
+	err := s.db.DeleteUsers(context.Background())
+    if err != nil {
+        fmt.Println("error resetting users:", err)
+        os.Exit(1)
+    }
+	fmt.Println("users table has been reset")
+	return nil
+}
+
+func handlerGetUsers(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+        return errors.New("too many arguments")
+    }
+	u,err := s.db.GetUsers(context.Background())
+    if err != nil {
+        fmt.Println("error resetting users:", err)
+        os.Exit(1)
+    }
+	for _,user := range u {
+		if user.Name == s.config.CurrentUserName {
+			fmt.Printf("* %s (current)\n", user.Name)
+		}else {
+			fmt.Printf("* %s\n",user.Name)
+		}
+	}
+	return nil
+}
+
+func buildRequest(ctx context.Context, feedURL string) (*http.Request, error) {
+    req, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL, nil)
+    if err != nil {
+        return nil, err
+    }
+    req.Header.Set("User-Agent", "gator")
+    return req, nil
+}
+
+func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
+
+}
 
 func main() {
-	if len(os.Args) < 3 {
-		if len(os.Args) == 1 {
-			fmt.Println("not enough arguments were provided")
-			os.Exit(1)
-		} else if len(os.Args) == 2 {
-			fmt.Println("provide a username")
-			os.Exit(1)
-		}
+	if len(os.Args) < 2 {
+		fmt.Println("not enough arguments")
+		os.Exit(1)
 	}
 	newCommand := command{
 		name: os.Args[1],
-		args: []string{os.Args[2]},
+		args: []string{},
+	}
+	if len(os.Args) > 2 {
+		newCommand.args = os.Args[2:]
 	}
 	var newState state
 	currConfig, err := config.Read()
@@ -117,6 +161,8 @@ func main() {
 	}
 	newCommands.register("login", handlerLogin)
 	newCommands.register("register", handlerRegister)
+	newCommands.register("reset", handlerReset)
+	newCommands.register("users", handlerGetUsers)
 
 	dbURL := newState.config.DBURL
 	db, err := sql.Open("postgres", dbURL)
